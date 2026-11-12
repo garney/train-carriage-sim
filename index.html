@@ -1,0 +1,45 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Carriage Watch</title>
+    <link rel="stylesheet" href="./style.css" />
+  </head>
+  <body>
+    <main class="app-shell">
+      <header>
+        <div>
+          <p class="eyebrow">SYDNEY RAIL · OBSERVATION SIM</p>
+          <h1>Carriage Watch</h1>
+          <p class="subtitle">A weekday morning on a single double-deck carriage.</p>
+        </div>
+        <div class="journey-panel" aria-label="Journey status">
+          <div class="journey-time"><span id="clock">07:42</span><small id="station">T1 · Central</small></div>
+          <div class="stop-card now"><small>NOW AT</small><strong id="currentStop">Central</strong></div>
+          <span class="journey-arrow">→</span>
+          <div class="stop-card next"><small>NEXT STOP</small><strong id="nextStop">Redfern</strong></div>
+        </div>
+      </header>
+
+      <section class="control-strip" aria-label="Simulation controls">
+        <button id="pauseBtn">Pause</button>
+        <button id="rushBtn" class="accent">Next stop + 8</button>
+        <label>Train line <select id="lineSelect"><option value="T1">T1 · Western</option><option value="T4">T4 · Eastern Suburbs & Illawarra</option><option value="T9">T9 · Northern</option></select></label>
+        <div class="stats"><span><b id="seatedCount">0</b> seated</span><span><b id="standingCount">0</b> standing</span><span><b id="freeCount">0</b> free</span></div>
+      </section>
+      <section class="student-flow" aria-label="Student travel flow">
+        <span class="flow-label">STUDENT FLOW</span>
+        <strong id="schoolPhase">Before school</strong>
+        <span id="schoolGroup">Groups travelling together</span>
+        <span class="flow-exit">GET OFF</span>
+        <strong id="schoolExit">—</strong>
+      </section>
+
+      <canvas id="simCanvas" aria-label="Bird's eye view of upper and lower decks of a train carriage"></canvas>
+      <div class="route" aria-label="Current train route"><strong id="lineBadge">T1</strong><span id="carriageId">carriage T1-01</span><span id="routeStops"></span></div>
+      <p class="legend"><i class="adult"></i> commuter <i class="student"></i> student / school group <i class="standing"></i> standing · the white dash marks a student; arrows show each bank’s facing</p>
+    </main>
+    <script src="./sim.js"></script>
+  </body>
+</html>
