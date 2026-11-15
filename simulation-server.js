@@ -25,7 +25,40 @@ export class CarriageSimulation {
   movePerson(p,deck,dt){const target=this.nextWaypoint(p);if(!target)return;const blocker=p.squeezeTimer>0?null:this.aisleBlocker(p,deck);if(blocker){p.wait+=dt;if(blocker.phase==='settled'&&blocker.standing){blocker.yieldTimer=.9;blocker.yieldX=blocker.x<.5?.39:.61;}const patience=p.impatient?.65:1.55;if(p.wait<patience)return;p.squeezeTimer=1.15;p.frustration++;p.wait=0;}else if(!p.squeezeTimer)p.wait=0;p.squeezeTimer=Math.max(0,p.squeezeTimer-dt);const aisle=Math.abs(p.x-.5)<.09&&Math.abs(target.x-.5)<.09,tx=aisle&&p.squeezeTimer>0?p.lane:target.x,ty=target.y,dx=tx-p.x,dy=ty-p.y,d=Math.hypot(dx,dy),step=Math.min(d,dt*p.speed*(p.squeezeTimer>0?.78:1));if(d){p.x+=dx/d*step;p.y+=dy/d*step;}if(Math.hypot(target.x-p.x,target.y-p.y)<.012){p.x=target.x;p.y=target.y;p.pathIndex++;}if(p.pathIndex>=p.path.length){if(p.phase==='enter'){if(p.seat&&p.seat.bankRef.facing!==p.preferredFacing){p.seat.bankRef.facing=p.preferredFacing;p.seat.bankRef.turning=.75;}p.phase='settled';}if(p.phase==='reseat'){if(!this.assignSeat(p,deck)){p.phase='settled';p.standing=true;}}}}
   sendPassengersOff(){let count=0;this.decks.forEach(deck=>deck.people.forEach(p=>{if(p.phase!=='alighting'&&p.alightAt===this.state.stop){if(p.seat?.role==='window')this.bankOccupants(deck,p.seat.bankRef).filter(s=>s.person!==p).forEach(s=>this.beginReseat(s.person));if(p.seat)p.seat.person=null;p.seat=null;p.standing=true;p.phase='alighting';p.path=[{x:.5,y:p.y},{x:.5,y:p.y<.5?-.07:1.07}];p.pathIndex=0;p.wait=0;count++;}}));this.decks.forEach(d=>d.people.filter(p=>p.standing&&p.phase==='settled').forEach(p=>this.assignSeat(p,d)));this.state.lastAlighting=count;}
   actOnCommuter(id,action){const deck=this.decks.find(d=>d.people.some(p=>p.id===id)),p=deck?.people.find(person=>person.id===id);if(!p)return false;if(action==='find-seat'){this.beginReseat(p);this.assignSeat(p,deck);}if(action==='give-way'){p.yieldTimer=1.6;p.yieldX=p.x<.5?.39:.61;}if(action==='hurry'){p.impatient=true;p.squeezeTimer=1.15;p.wait=0;p.frustration++;}if(action==='settle'){p.frustration=0;p.wait=0;p.impatient=false;p.squeezeTimer=0;}return true;}
-  tick(dt){if(this.state.paused)return;this.state.elapsed+=dt;this.state.time+=dt*.55;this.state.boardingCooldown-=dt;if(this.state.boardingCooldown<=0&&this.admitBoarder())this.state.boardingCooldown=.42+this.random()*.18;if(this.state.elapsed>this.state.nextArrival){this.arrive(1+Math.floor(this.random()*3));this.state.nextArrival=this.state.elapsed+.9+this.random()*1.9;}if(this.state.elapsed>10){this.state.elapsed=0;this.state.stop=(this.state.stop+1)%this.stops.length;this.state.time+=4;this.sendPassengersOff();if(this.random()>.35)this.arrive(2+Math.floor(this.random()*5));}this.decks.forEach(d=>{d.banks.forEach(b=>b.turning=Math.max(0,b.turning-dt));d.people.forEach(p=>{if(p.yieldTimer>0){p.yieldTimer-=dt;p.x+=(p.yieldX-p.x)*Math.min(1,dt*5);}else if(p.phase==='settled'&&p.standing)p.x+=(.5-p.x)*Math.min(1,dt*1.5);});d.people.filter(p=>['enter','alighting','reseat'].includes(p.phase)).forEach(p=>this.movePerson(p,d,dt));d.people=d.people.filter(p=>!(p.phase==='alighting'&&(p.y<-.02||p.y>1.02)));});}
+  tick(dt){
+    if(this.state.paused)return;
+    // Service events keep their deliberately slow, observable cadence. People, however,
+    // cover distance in compressed simulation time so their journeys complete between stops.
+    const motionDt=dt*2.4;
+    this.state.elapsed+=dt;
+    this.state.time+=dt*.55;
+    this.state.boardingCooldown-=dt;
+    if(this.state.boardingCooldown<=0&&this.admitBoarder())this.state.boardingCooldown=.42+this.random()*.18;
+    if(this.state.elapsed>this.state.nextArrival){
+      this.arrive(1+Math.floor(this.random()*3));
+      this.state.nextArrival=this.state.elapsed+.9+this.random()*1.9;
+    }
+    if(this.state.elapsed>10){
+      this.state.elapsed=0;
+      this.state.stop=(this.state.stop+1)%this.stops.length;
+      this.state.time+=4;
+      this.sendPassengersOff();
+      if(this.random()>.35)this.arrive(2+Math.floor(this.random()*5));
+    }
+    this.decks.forEach(d=>{
+      d.banks.forEach(b=>b.turning=Math.max(0,b.turning-motionDt));
+      d.people.forEach(p=>{
+        if(p.yieldTimer>0){
+          p.yieldTimer-=motionDt;
+          p.x+=(p.yieldX-p.x)*Math.min(1,motionDt*5);
+        }else if(p.phase==='settled'&&p.standing){
+          p.x+=(.5-p.x)*Math.min(1,motionDt*1.5);
+        }
+      });
+      d.people.filter(p=>['enter','alighting','reseat'].includes(p.phase)).forEach(p=>this.movePerson(p,d,motionDt));
+      d.people=d.people.filter(p=>!(p.phase==='alighting'&&(p.y<-.02||p.y>1.02)));
+    });
+  }
   snapshot(){
     const flow=this.schoolFlow(),time=Math.floor(this.state.time)%1440;
     return {line:this.line,color:lines[this.line].color,stops:this.stops,state:{...this.state,time},flow,decks:this.decks.map(d=>({
