@@ -20,7 +20,11 @@ io.on("connection", (socket) => {
   socket.data.line = "T1"; sendSnapshot(socket, socket.data.line);
   socket.on("simulation:watch", (line) => { if (simulations.has(line)) { socket.data.line = line; sendSnapshot(socket, line); } });
   socket.on("simulation:pause", () => { const sim = simulations.get(socket.data.line); sim.state.paused = !sim.state.paused; });
-  socket.on("simulation:rush", () => simulations.get(socket.data.line).arrive(8));
+  socket.on("simulation:rush", () => {
+    const sim = simulations.get(socket.data.line);
+    sim.rush(8);
+    sendSnapshot(socket, socket.data.line);
+  });
   socket.on("simulation:commuter-action", ({ id, action }) => {
     const sim = simulations.get(socket.data.line);
     if (["find-seat", "give-way", "hurry", "settle"].includes(action) && sim.actOnCommuter(id, action)) sendSnapshot(socket, socket.data.line);
