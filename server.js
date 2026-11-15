@@ -21,6 +21,10 @@ io.on("connection", (socket) => {
   socket.on("simulation:watch", (line) => { if (simulations.has(line)) { socket.data.line = line; sendSnapshot(socket, line); } });
   socket.on("simulation:pause", () => { const sim = simulations.get(socket.data.line); sim.state.paused = !sim.state.paused; });
   socket.on("simulation:rush", () => simulations.get(socket.data.line).arrive(8));
+  socket.on("simulation:commuter-action", ({ id, action }) => {
+    const sim = simulations.get(socket.data.line);
+    if (["find-seat", "give-way", "hurry", "settle"].includes(action) && sim.actOnCommuter(id, action)) sendSnapshot(socket, socket.data.line);
+  });
   socket.on("simulation:step", (milliseconds) => {
     const sim = simulations.get(socket.data.line);
     const steps = Math.max(1, Math.min(600, Math.round(Number(milliseconds) / (1000 / 60))));
